@@ -66,6 +66,8 @@ const Main = () => {
   const [model, setModel] = useState(defaultModel);
   const [outputType, setOutputType] = useState(DefaultsMap.get(defaultInputType)?.outputType);
   const [alertText, setAlertText] = useState('');
+  const [outputText, setOutputText] = useState('');
+
 
   const onDismiss = () => setAlertText('');
 
@@ -78,9 +80,12 @@ const Main = () => {
       })
         // setModel(data)
       setAlertText('');
-    } catch (e) {
-      setAlertText(e.message);
-      // setProperties([]);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setAlertText(e.message); // Now 'e' is treated as an 'Error' and we can access 'message'
+      } else {
+        setAlertText('An unknown error occurred');
+      }
       setModel({})
     }
 
@@ -90,8 +95,13 @@ const Main = () => {
     applyInputText(inputType, inputText);
   }, [inputType, inputText, applyInputText]);
 
-  const onChangeHandler = (event: any) => {
+  const onInputChangeHandler = (event: any) => {
     applyInputText(inputType, `${event.target.value}`);
+  };
+
+// Event handler to update outputText when the user edits it
+  const onOutputChangeHandler = (event: any) => {
+    setOutputText(event.target.value); // Update the outputText state on user input
   };
 
   const onChangeInputTypeHandler = (event: any) => {
@@ -134,18 +144,24 @@ const Main = () => {
       items.push(<option key={regular.length} value={newOption}>{newOption}</option>);
     }
     return items;
-  }  
- 
-  var outputText
-  try {
-    const properties = deflate(model.value) // Convert the JSON structure into an array of strings
-    console.log(model.value)
-    outputText = properties ? outputFormatter(outputType, properties) : ''
-  } catch (e) {
-    console.log(e)
-    outputText = ''
   }
-  
+
+  useEffect(() => {
+    // Try block moved into useEffect to trigger when model.value changes
+    try {
+      const properties = deflate(model.value); // Convert the JSON structure into an array of strings
+      console.log(model.value);
+
+      // Update the outputText state
+      setOutputText(properties ? outputFormatter(outputType, properties) : '');
+    } catch (e) {
+      console.log(e);
+      // If error, reset outputText state
+      setOutputText('');
+    }
+  }, [model.value, outputType]); // Re-run the effect when model.value or outputType changes
+
+
   return (
     <div className="main">
     <Container>
@@ -162,7 +178,7 @@ const Main = () => {
             </FormGroup>
             <Input type="textarea" name="text1" id="inputSelectMain" 
             value={inputText}
-            onChange={onChangeHandler}/>
+            onChange={onInputChangeHandler}/>
             <Alert color="danger" isOpen={!!alertText.trim()} toggle={onDismiss}>
               {alertText}
             </Alert>
@@ -182,7 +198,8 @@ const Main = () => {
             </FormGroup>
             <Input type="textarea" name="text2" id="outputSelectMain" 
               value={outputText}
-              onChange={onChangeHandler}/>  
+               onChange={onOutputChangeHandler}
+            />
             <br/>
           </div>
         </Col>
